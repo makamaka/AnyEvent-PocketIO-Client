@@ -6,41 +6,77 @@ SYNOPSIS
         use AnyEvent::PocketIO::Client;
     
         my $client = AnyEvent::PocketIO::Client->new;    
-        my $cv     = AnyEvent->condvar;
+
+        $client->on('message' => sub {
+            print STDERR "get message : $_[1]\n";
+        });
+
+        # first handhake, then open.
     
-        $client->set_handler( sub {
-            my ( $self ) = shift;
-            $self->reg_event('message' => sub {
-                print STDERR "get message : $_[1]\n";
-            });
-            $self->reg_event('foo' => sub {
-                # ...
-                $cv->end;            
-            });
-        } );
-    
-        my $cv2  = AnyEvent->condvar;
-    
+        my $cv = AnyEvent->condvar;
+
         $client->handshake( $server, $port, sub {
-            my ( $self, $sesid, $hb_timeout, $con_timeout, $transports ) = @_;
+            my ( $self, $sesid, $hb_timeout, $con_timeout, $trans ) = @_;
 
-            $self->on( 'connect' => sub {
-                $cv2->send;
-            });
+            $client->open( 'websocket' => sub {
 
-            $client->connect();
+                $self->reg_event('foo' => sub {
+                    # ...
+                });
+
+                $cv->send;
+            } );
+
         } );
     
-        $cv2->wait;
-    
-        $cv->begin;
-        $client->emit('bar');
         $cv->wait;
+    
+        # ... loop, timer, etc.
     
         $client->disconnect;
 
 DESCRIPTION
+    Async client using AnyEvent.
+
     This is beta version!
+
+    API will be changed.
+
+    Currently acceptable transport id is websocket only.
+
+METHODS
+  new
+        $client = AnyEvent::PocketIO::Client->new
+
+  handshake
+        $client->handshake( $host, $port, $cb );
+
+  open
+        $client->open( $transport_id, $cb );
+
+  is_opened
+        $boolean = $client->is_opend
+
+  connect
+        $client->connect( $endpoint )
+
+  disconnect
+        $client->disconnect( $endpoint )
+
+  reg_event
+        $client->reg_event( 'name' => $subref )
+
+  emit
+        $client->emit( 'event_name', @args )
+
+  send
+        $client->send( 'message' )
+
+  conn
+        $conn = $client->conn; # PocketIO::Connection
+
+  on
+        $client->on( 'messsage_type' => $cb );
 
 SEE ALSO
     AnyEvent, PocketIO

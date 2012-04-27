@@ -16,19 +16,6 @@ use Data::Dumper;
 
 use AnyEvent::PocketIO::Client;
 
-use Storable;
-use Safe;
-use B::Deparse;
-
-# for Test::SharedFork
-eval q{ # avoiding warnings
-    local $^W;
-    $Storable::Deparse = 1;
-    $Storable::Eval    = 1;
-};
-
-
-
 my $app = builder {
     mount '/socket.io' => PocketIO->new(
         handler => sub {
@@ -60,36 +47,30 @@ test_pocketio(
 );
 
 sub _test {
-    use Test::More; # for Test::SharedFork
-
     my $port   = shift;
     my $client = AnyEvent::PocketIO::Client->new;    
 
     isa_ok( $client, 'AnyEvent::PocketIO::Client' );
 
-    my $hb  = 0;
+    my $cv  = AnyEvent->condvar;
     my $cv2 = AnyEvent->condvar;
 
-    $client->set_handler( sub {
-        my ( $client ) = shift;
-        $client->reg_event('message' => sub {
-            ok(1, 'message ' . $_[1]);
-            $cv2->end;
-        });
-        $client->reg_event('bar' => sub {
-            ok(1, 'bar! <= foo');
-            $cv2->end;
-        });
-    } );
+    $client->on('connect' => sub {
+        ok(1, 'connect(message)');
+        $cv2->end;
+    });
 
-    # main
+    $client->on('message' => sub {
+        ok(1, 'message ' . $_[1]);
+        $cv2->end;
+    });
 
-    my $cv  = AnyEvent->condvar;
-
+    my $hb  = 0;
     $client->on( 'heartbeat' => sub {
-        if ( ++$hb > 1 ) {
+        if ( ++$hb > 1 ) { # all cancel
             diag("many hearbeat");
             $cv->send;
+            $cv2->end;
             $cv2->end;
             $cv2->end;
         }
@@ -97,24 +78,30 @@ sub _test {
 
     $client->handshake( $server, $port, sub {
         my ( $self, $sesid, $hbtimeout, $contimeout, $transports ) = @_;
-        ok( $sesid, sprintf("handshake:%s,%s,%s", $sesid, $hbtimeout, $contimeout) );
 
-        $client->on( 'connect' => sub {
-            ok(1, 'connect');
+        ok( $sesid, sprintf("handshake : %s,%s,%s", $sesid, $hbtimeout, $contimeout) );
+
+        $client->open( 'websocket' => sub {
+            my ( $self ) = shift;
+            $self->reg_event('bar' => sub {
+                ok(1, 'bar! <= foo');
+                $cv2->end;
+            });
+            ok(1, 'socket opend');
             $cv->send;
         });
 
-        $client->connect();
     } );
 
     $cv->wait;
 
     $cv2->begin;
-    $client->emit('hello', 'makamaka');
+        $client->emit('hello', 'makamaka');
     $cv2->begin;
-    $client->emit('foo');
+        $client->emit('foo');
+    $cv2->begin;
+        $client->connect();
     $cv2->wait;
-
 
     my $cv3 = AnyEvent->condvar;
 
