@@ -1,11 +1,11 @@
 NAME
-    AnyEvnet::PocketIO::Client - pocketio client
+    AnyEvent::PocketIO::Client - pocketio client
 
 SYNOPSIS
         use AnyEvent;
-        use AnyEvnet::PocketIO::Client;
+        use AnyEvent::PocketIO::Client;
     
-        my $client = AnyEvnet::PocketIO::Client->new;    
+        my $client = AnyEvent::PocketIO::Client->new;    
         my $cv     = AnyEvent->condvar;
     
         $client->set_handler( sub {
@@ -43,7 +43,7 @@ DESCRIPTION
     This is beta version!
 
 SEE ALSO
-    AnyEvnet, PocketIO
+    AnyEvent, PocketIO
 
 AUTHOR
     Makamaka Hannyaharamitu, <makamaka[at]cpan.org>

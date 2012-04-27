@@ -268,7 +268,7 @@ This is B<beta> version!
 
 =head1 SEE ALSO
 
-L<AnyEvnet>, L<PocketIO>
+L<AnyEvent>, L<PocketIO>
 
 =head1 AUTHOR
 
