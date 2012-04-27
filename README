@@ -1,0 +1,56 @@
+NAME
+    AnyEvnet::PocketIO::Client - pocketio client
+
+SYNOPSIS
+        use AnyEvent;
+        use AnyEvnet::PocketIO::Client;
+    
+        my $client = AnyEvnet::PocketIO::Client->new;    
+        my $cv     = AnyEvent->condvar;
+    
+        $client->set_handler( sub {
+            my ( $self ) = shift;
+            $self->reg_event('message' => sub {
+                print STDERR "get message : $_[1]\n";
+            });
+            $self->reg_event('foo' => sub {
+                # ...
+                $cv->end;            
+            });
+        } );
+    
+        my $cv2  = AnyEvent->condvar;
+    
+        $client->handshake( $server, $port, sub {
+            my ( $self, $sesid, $hb_timeout, $con_timeout, $transports ) = @_;
+
+            $self->on( 'connect' => sub {
+                $cv2->send;
+            });
+
+            $client->connect();
+        } );
+    
+        $cv2->wait;
+    
+        $cv->begin;
+        $client->emit('bar');
+        $cv->wait;
+    
+        $client->disconnect;
+
+DESCRIPTION
+    This is beta version!
+
+SEE ALSO
+    AnyEvnet, PocketIO
+
+AUTHOR
+    Makamaka Hannyaharamitu, <makamaka[at]cpan.org>
+
+COPYRIGHT AND LICENSE
+    Copyright 2012 by Makamaka Hannyaharamitu
+
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
