@@ -7,6 +7,7 @@ use AnyEvent;
 use AnyEvent::Handle;
 use AnyEvent::Socket;
 use PocketIO::Handle;
+use PocketIO::Connection;
 use Protocol::WebSocket::Frame;
 use Protocol::WebSocket::Handshake::Client;
 
