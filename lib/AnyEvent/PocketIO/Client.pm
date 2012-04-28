@@ -31,6 +31,8 @@ sub socket { $_[0]->conn->socket; }
 sub handshake {
     my ( $self, $host, $port, $cb ) = @_;
 
+    $cb ||= sub {};
+
     tcp_connect( $host, $port,
         sub {
             my ($fh) = @_ or die $!;
@@ -46,17 +48,42 @@ sub handshake {
 
             $socket->push_write("GET /socket.io/1/ HTTP/1.1\nHost: $host:$port\n\n");
 
+            my $read = 0; # handshake is finished?
+
+            # TODO: timeout handling
+
             $socket->on_read( sub {
-                my ( $line ) = $_[0]->rbuf =~ /\015\012\015\012(.+)/sm;
-                return unless defined $line;
+                return unless length $_[0]->rbuf;
+                return if $read;
+
+                my ( $status_line ) = $_[0]->rbuf =~ /^(.+)\015\012/;
+                my ( $code ) = $status_line =~ m{^HTTP/[.01]+ (\d+) };
+                my $error;
+
+                if ( $code && $code != 200 ) {
+                    $_[0]->rbuf =~ /\015\012\015\012(.*)/sm;
+                    $error = { code => $code, message => $1 };
+                    $read++;
+                    $cb->( $error, $self );
+                    return;
+                }
+
+                my ( $line ) = $_[0]->rbuf =~ /\015\012\015\012([^:]+:[^:]+:[^:]+:[^:]+)/sm;
+
+                unless ( defined $line ) {
+                    return;
+                }
+
                 my ( $sid, $hb_timeout, $con_timeout, $transports ) = split/:/, $line;
                 $transports = [split/,/, $transports];
                 $self->{ acceptable_transports } = $transports;
                 $self->{ session_id } = $sid;
                 $socket->destroy;
-                $cb->( $self, $sid, $hb_timeout, $con_timeout, $transports ) if $cb;
+                $read++;
+                $cb->( $error, $self, $sid, $hb_timeout, $con_timeout, $transports );
             } );
     } );
+
 }
 
 sub _build_frame {
@@ -143,7 +170,7 @@ sub open {
     my $port = $self->{ port };
     my $sid  = $self->{ session_id };
 
-    return Carp::carp("Tried connect() but no session id.") && 0 unless $sid;
+    return Carp::carp("Tried open() but no session id.") && 0 unless $sid;
 
     if ( $trans && ref $trans eq 'CODE' ) {
         $cb = $trans; $trans = undef;
@@ -253,7 +280,7 @@ AnyEvent::PocketIO::Client - pocketio client
     my $cv = AnyEvent->condvar;
 
     $client->handshake( $server, $port, sub {
-        my ( $self, $sesid, $hb_timeout, $con_timeout, $trans ) = @_;
+        my ( $error, $self, $sesid, $hb_timeout, $con_timeout, $trans ) = @_;
 
         $client->open( 'websocket' => sub {
 
@@ -291,6 +318,19 @@ Currently acceptable transport id is websocket only.
 =head2 handshake
 
     $client->handshake( $host, $port, $cb );
+
+The handshake routine. it executes a call back C<$cb> that takes
+error, client itself, session id, heartbeat timeout, connection timeout,
+list reference of transports.
+
+    sub {
+        my ( $error, $client, $sesid, $hb_timeout, $conn_timeout, $trans ) = @_;
+        if ( $error ) {
+            say "code:", $error->{ code };
+            say "message:", $error->{ message };
+        }
+        # ...        
+    }
 
 =head2 open
 

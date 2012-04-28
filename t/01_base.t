@@ -77,7 +77,7 @@ sub _test {
     });
 
     $client->handshake( $server, $port, sub {
-        my ( $self, $sesid, $hbtimeout, $contimeout, $transports ) = @_;
+        my ( $error, $self, $sesid, $hbtimeout, $contimeout, $transports ) = @_;
 
         ok( $sesid, sprintf("handshake : %s,%s,%s", $sesid, $hbtimeout, $contimeout) );
 
