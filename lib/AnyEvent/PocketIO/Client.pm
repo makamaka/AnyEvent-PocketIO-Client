@@ -36,7 +36,7 @@ sub handshake {
 
     tcp_connect( $host, $port,
         sub {
-            my ($fh) = @_ or die $!;
+            my ($fh) = @_ or return $cb->( { code => 500, message => $! }, $self );
 
             @{$self}{qw/host port/} = ( $host, $port );
 
