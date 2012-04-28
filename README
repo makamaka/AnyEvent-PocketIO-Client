@@ -16,7 +16,7 @@ SYNOPSIS
         my $cv = AnyEvent->condvar;
 
         $client->handshake( $server, $port, sub {
-            my ( $self, $sesid, $hb_timeout, $con_timeout, $trans ) = @_;
+            my ( $error, $self, $sesid, $hb_timeout, $con_timeout, $trans ) = @_;
 
             $client->open( 'websocket' => sub {
 
@@ -50,6 +50,19 @@ METHODS
 
   handshake
         $client->handshake( $host, $port, $cb );
+
+    The handshake routine. it executes a call back $cb that takes error,
+    client itself, session id, heartbeat timeout, connection timeout, list
+    reference of transports.
+
+        sub {
+            my ( $error, $client, $sesid, $hb_timeout, $conn_timeout, $trans ) = @_;
+            if ( $error ) {
+                say "code:", $error->{ code };
+                say "message:", $error->{ message };
+            }
+            # ...        
+        }
 
   open
         $client->open( $transport_id, $cb );
