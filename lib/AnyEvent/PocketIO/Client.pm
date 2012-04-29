@@ -20,7 +20,11 @@ our $VERSION = '0.01';
 sub new {
     my $this  = shift;
     my $class = ref $this || $this;
-    bless {}, $class;
+    bless {
+        handshake_timeout => 10,
+        open_timeout      => 10,
+        @_,
+    }, $class;
 }
 
 sub handle { $_[0]->{ handle }; }
@@ -28,6 +32,17 @@ sub handle { $_[0]->{ handle }; }
 sub conn { $_[0]->{ conn }; }
 
 sub socket { $_[0]->conn->socket; }
+
+sub _start_timer {
+    my ( $self, $timer_name, $cb ) = @_;
+    my $after = $self->{ "${timer_name}_timeout" } || 0;
+    $self->{ "${timer_name}_timer" } = AnyEvent->timer( after => $after, cb => $cb );
+}
+
+sub _stop_timer {
+    my ( $self, $timer_name ) = @_;
+    delete $self->{ "${timer_name}_timer" };
+}
 
 sub handshake {
     my ( $self, $host, $port, $cb ) = @_;
@@ -51,7 +66,12 @@ sub handshake {
 
             my $read = 0; # handshake is finished?
 
-            # TODO: timeout handling
+            $self->_start_timer( 'handshake', sub {
+                $socket->fh->close;
+                $read++;
+                $self->_stop_timer( 'handshake' );
+                $cb->( { code => 500, message => 'Handshake timeout.' }, $self );
+            } );
 
             $socket->on_read( sub {
                 return unless length $_[0]->rbuf;
@@ -74,6 +94,8 @@ sub handshake {
                 unless ( defined $line ) {
                     return;
                 }
+
+                $self->_stop_timer( 'handshake' );
 
                 my ( $sid, $hb_timeout, $con_timeout, $transports ) = split/:/, $line;
                 $transports = [split/,/, $transports];
@@ -314,15 +336,23 @@ Currently acceptable transport id is websocket only.
 
 =head2 new
 
-    $client = AnyEvent::PocketIO::Client->new
+    $client = AnyEvent::PocketIO::Client->new( %opts )
+
+C<new> takes options
+
+=over
+
+=item handshake_timeout
+
+=back
 
 =head2 handshake
 
     $client->handshake( $host, $port, $cb );
 
 The handshake routine. it executes a call back C<$cb> that takes
-error, client itself, session id, heartbeat timeout, connection timeout,
-list reference of transports.
+error, client itself, session id, heartbeat timeout, connection timeout
+and list reference of transports.
 
     sub {
         my ( $error, $client, $sesid, $hb_timeout, $conn_timeout, $trans ) = @_;
@@ -368,6 +398,8 @@ list reference of transports.
 =head2 on
 
     $client->on( 'messsage_type' => $cb );
+
+Acceptable types are 'connect', 'disconnect', 'heartbeat' and 'message'.
 
 =head1 SEE ALSO
 
