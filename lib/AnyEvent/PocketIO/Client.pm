@@ -195,7 +195,11 @@ sub open {
         $cb = $trans; $trans = undef;
     }
 
-    return Carp::carp("Tried open() but no session id.") && 0 unless $sid;
+    unless ( $sid ) {
+        my $message = "Tried open but no session id.";
+        $cb ? return $cb->({ code => 500, message => $message }, $self)
+            : Carp::croak($message)
+    }
 
     $trans = 'websocket'; # TODO ||= $self->{ acceptable_transports }->[0];
     $self->{ transport } = $self->_build_transport( $trans );
