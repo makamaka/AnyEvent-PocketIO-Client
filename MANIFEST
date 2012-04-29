@@ -1,7 +1,13 @@
 lib/AnyEvent/PocketIO/Client.pm
+lib/AnyEvent/PocketIO/Client/Transport/WebSocket.pm
+lib/PocketIO/Client/IO.pm
 Makefile.PL
 MANIFEST			This list of files
-MYMETA.json
-MYMETA.yml
 README
-t/01.t
+t/01_base.t
+t/02_error.t
+t/03_dup_con.t
+t/04_multi_conn.t
+t/05_handshake_timeout.t
+t/io_api.t
+
