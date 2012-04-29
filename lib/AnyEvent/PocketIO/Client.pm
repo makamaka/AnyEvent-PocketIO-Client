@@ -294,6 +294,29 @@ AnyEvent::PocketIO::Client - pocketio client
     # ... loop, timer, etc.
     
     $client->disconnect;
+    
+    
+    #
+    # OR socket.io client interface
+    #
+
+    use PocketIO::Client::IO;
+    my $socket = PocketIO::Client::IO->connect("http://localhost:3000/");
+
+    my $cv = AnyEvent->condvar;
+    my $w  = AnyEvent->timer( after => 5, cb => $cv );
+
+    $socket->on( 'message', sub {
+        say $_[1];
+    } );
+
+    $socket->on( 'connect', sub {
+        $socket->send('Parumon!');
+        $socket->emit('hello', "perl");
+    } );
+
+    $cv->wait;
+
 
 =head1 DESCRIPTION
 
