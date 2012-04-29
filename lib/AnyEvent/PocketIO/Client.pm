@@ -256,6 +256,8 @@ AnyEvent::PocketIO::Client - pocketio client
 
 =head1 SYNOPSIS
 
+    # This APIs will be changed.
+
     use AnyEvent;
     use AnyEvent::PocketIO::Client;
     
@@ -265,7 +267,7 @@ AnyEvent::PocketIO::Client - pocketio client
         print STDERR "get message : $_[1]\n";
     });
 
-    # first handhake, then open.
+    # first handshake, then open.
     
     my $cv = AnyEvent->condvar;
 
@@ -295,7 +297,7 @@ Async client using AnyEvent.
 
 This is B<beta> version!
 
-API will be changed.
+APIs will be changed.
 
 Currently acceptable transport id is websocket only.
 
@@ -334,6 +336,23 @@ and list reference of transports.
 
     $client->open( $transport_id, $cb );
 
+After C<handshake> success, makes a connection to the server.
+Currently C<$transport_id> (case-insensitive) is C<websocket> only.
+
+When the connection is made, $cb is executed.
+$cb takes error object and client object.
+
+    sub {
+        my ( $error, $client ) = @_;
+
+        if ( $error ) {
+            say "code:", $error->{ code };
+            say "message:", $error->{ message };
+        }
+
+        # ...        
+    }
+
 =head2 is_opened
 
     $boolean = $client->is_opend
@@ -349,6 +368,10 @@ and list reference of transports.
 =head2 reg_event
 
     $client->reg_event( 'name' => $subref )
+
+Register an event triggered by server's emit.
+
+You should call this method after C<open>ed.
 
 =head2 emit
 
@@ -367,6 +390,10 @@ and list reference of transports.
     $client->on( 'messsage_type' => $cb );
 
 Acceptable types are 'connect', 'disconnect', 'heartbeat' and 'message'.
+
+=head2 tranport
+
+    my $transport = $client->transport();
 
 =head1 SEE ALSO
 
