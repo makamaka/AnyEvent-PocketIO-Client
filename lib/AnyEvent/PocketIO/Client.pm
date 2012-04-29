@@ -118,9 +118,14 @@ sub opened {
 sub reg_event {
     my ( $self, $name, $cb ) = @_;
     return Carp::carp('reg_event() must take a code reference.') if $cb && ref($cb) ne 'CODE';
-    return Carp::carp("reg_event() must be called after connected.") unless $self->is_opened;
     return Carp::carp("$name is reserved event.") if exists $RESERVED_EVENT{ $name }; 
-    $self->conn->socket->on( $name => $cb );
+
+    if ( $self->is_opened ) {
+        $self->conn->socket->on( $name => $cb );
+    }
+    else {
+        $self->{ not_yet_reg_event }->{ $name } = $cb;
+    }
 }
 
 sub on {
