@@ -8,8 +8,6 @@ use AnyEvent::Handle;
 use AnyEvent::Socket;
 use PocketIO::Handle;
 use PocketIO::Connection;
-use Protocol::WebSocket::Frame;
-use Protocol::WebSocket::Handshake::Client;
 
 my %RESERVED_EVENT = map { $_ => 1 }
                         qw/message connect disconnect open close error retry reconnect/;
@@ -109,11 +107,6 @@ sub handshake {
 
 }
 
-sub _build_frame {
-    my $self = shift;
-    return Protocol::WebSocket::Frame->new( @_ )->to_bytes;
-}
-
 sub is_opened {
     $_[0]->{ is_opened };
 }
@@ -182,9 +175,9 @@ sub connect {
     $self->on('connect')->( $endpoint );
 }
 
-sub transport_id {
-    $_[0]->{ transport_id } = $_[0] if @_ > 1;
-    $_[0]->{ transport_id };
+sub transport {
+    $_[0]->{ transport } = $_[0] if @_ > 1;
+    $_[0]->{ transport };
 }
 
 sub open {
@@ -193,90 +186,59 @@ sub open {
     my $port = $self->{ port };
     my $sid  = $self->{ session_id };
 
-    return Carp::carp("Tried open() but no session id.") && 0 unless $sid;
-
     if ( $trans && ref $trans eq 'CODE' ) {
         $cb = $trans; $trans = undef;
     }
 
+    return Carp::carp("Tried open() but no session id.") && 0 unless $sid;
+
     $trans = 'websocket'; # TODO ||= $self->{ acceptable_transports }->[0];
-    # TODO: setup transport class
-    $self->transport_id( $trans );
+    $self->{ transport } = $self->_build_transport( $trans );
 
     tcp_connect( $host, $port,
-         sub {
-            my ($fh) = @_ or die $!;
-            my $hs = Protocol::WebSocket::Handshake::Client->new(url =>
-                  "ws://$host:$port/socket.io/1/$trans/$sid");
-            my $frame  = Protocol::WebSocket::Frame->new( version => $hs->version );
-            $self->{ handle } = PocketIO::Handle->new(
-                fh => $fh, heartbeat_timeout => $self->{ heartbeat_timeout }
-            );
-
-            my $conn = $self->{ conn } = PocketIO::Connection->new();
-
-            $self->handle->write( $hs->to_string => sub {
-                my ( $handle ) = shift;
-
-                my $close_cb = sub { $handle->close; };
-
-                $handle->on_eof( $close_cb );
-                $handle->on_error( $close_cb );
-
-                $handle->on_heartbeat( sub {
-                    $conn->send_heartbeat;
-                    $self->on('heartbeat')->();
-                } );
-
-                $handle->on_read( sub {
-                    unless ( $self->is_opened ) {
-                        $self->opened;
-                        $cb->( $self ) if $cb; # may set event handler
-                        # default setting
-                        for my $name ( qw/connect message disconnect error/ ) {
-                            $conn->socket->on( $name => sub {} ) unless $conn->socket->on( $name );
-                        }
-                        #$conn->socket->on('connect')->( $conn->socket );
-                    }
-
-                    unless ($hs->is_done) {
-                        $hs->parse( $_[1] ); 
-                        return;
-                    }
-                    $frame->append( $_[1] );
-
-                    while ( my $message = $frame->next_bytes ) {
-                        $conn->parse_message( $message );
-                    }
-                } );
-
-                $conn->on(
-                    close => sub {
-                        $handle->close;
-                        $self->on('close')->();
-                    }
-                );
-
-                $conn->on(
-                    write => sub {
-                        my $bytes = $self->_build_frame(
-                            buffer => $_[1], version => $hs->version,
-                        );
-                        $handle->write( $bytes );
-                    },
-                );
-
-                $conn->socket->on('message' => sub {
-                    $self->on('message')->( $conn->socket, $_[1] );
-                });
-
-            });
+        sub {
+            my ($fh) = @_
+                or ($cb ? return $cb->({ code => 500, message => $! }, $self)
+                        : Carp::croak("Can't get socket.")
+                   );
+            return $self->transport->open( $self, $fh, $host, $port, $sid, $cb );
         }
     );
+}
 
+sub _run_open_cb {
+    my ( $self, $cb ) = @_;
+    my $conn = $self->conn;
+
+    $cb->( undef, $self );
+
+    for my $name ( keys %{ $self->{ not_yet_reg_event } } ) {
+        $conn->socket->on(
+            $name => delete $self->{ not_yet_reg_event }->{ $name }
+        );
+    }
+
+    # default setting
+    for my $name ( qw/connect disconnect error/ ) {
+        $conn->socket->on( $name => sub {} ) unless $conn->socket->on( $name );
+    }
+    #$conn->socket->on('connect')->( $conn->socket );
 }
 
 
+my %Transport = (
+    websocket => 'WebSocket',
+);
+
+sub _build_transport {
+    my ( $self, $transport_id ) = @_;
+    my $class = 'AnyEvent::PocketIO::Client::Transport::' . $Transport{ lc $transport_id };  
+
+    eval qq{ use $class };
+    if ($@) { Carp::croak $@; }
+
+    $class->new();
+}
 
 1;
 __END__

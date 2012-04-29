@@ -82,7 +82,7 @@ sub _test {
         ok( $sesid, sprintf("handshake : %s,%s,%s", $sesid, $hbtimeout, $contimeout) );
 
         $client->open( 'websocket' => sub {
-            my ( $self ) = shift;
+            my ( $error, $self ) = @_;
             $self->reg_event('bar' => sub {
                 ok(1, 'bar! <= foo');
                 $cv2->end;
