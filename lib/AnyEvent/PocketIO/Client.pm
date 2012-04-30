@@ -358,6 +358,8 @@ C<new> takes options
 
 =item handshake_timeout
 
+=item open_timeout
+
 =back
 
 =head2 handshake
@@ -406,9 +408,15 @@ $cb takes error object and client object.
 
     $client->connect( $endpoint )
 
+This method is for B<message type connect>.
+If you want to make a connection to the server in real,
+call C<open> method.
+
 =head2 disconnect
 
     $client->disconnect( $endpoint )
+
+Sends B<message type disconnect> to the server and close the socket handle.
 
 =head2 reg_event
 
@@ -434,15 +442,36 @@ You should call this method after C<open>ed.
 
     $client->on( 'messsage_type' => $cb );
 
-Acceptable types are 'connect', 'disconnect', 'heartbeat' and 'message'.
+Acceptable types are 'open', 'connect', 'disconnect', 'heartbeat' and 'message'.
 
 =head2 tranport
 
     my $transport = $client->transport();
 
+=head1 WRAPPER CLASS
+
+Simple client module L<PocketIO::Client::IO>.
+
+    use PocketIO::Client::IO;
+    my $socket = PocketIO::Client::IO->connect("http://localhost:3000/");
+
+    my $cv = AnyEvent->condvar;
+    my $w  = AnyEvent->timer( after => 5, cb => $cv );
+
+    $socket->on( 'message', sub {
+        say $_[1];
+    } );
+
+    $socket->on( 'connect', sub {
+        $socket->send('Parumon!');
+        $socket->emit('hello', "perl");
+    } );
+
+    $cv->wait;
+
 =head1 SEE ALSO
 
-L<AnyEvent>, L<PocketIO>
+L<AnyEvent>, L<PocketIO>, L<PcketIO::Client::IO>
 
 =head1 AUTHOR
 
