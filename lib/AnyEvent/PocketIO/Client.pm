@@ -113,6 +113,7 @@ sub is_opened {
 
 sub opened {
     $_[0]->{ is_opened } = 1;
+    $_[0]->_stop_timer( 'open' );
 }
 
 sub reg_event {
@@ -208,8 +209,25 @@ sub open {
         sub {
             my ($fh) = @_
                 or ($cb ? return $cb->({ code => 500, message => $! }, $self)
-                        : Carp::croak("Can't get socket.")
+                        : Carp::croak( $! )
                    );
+
+            $self->{ handle } = PocketIO::Handle->new(
+               fh => $fh, heartbeat_timeout => $self->{ heartbeat_timeout }
+            );
+
+            $self->{ conn } = PocketIO::Connection->new();
+
+            $self->_start_timer( 'open', sub {
+                local $Carp::CarpLevel = 3;
+                #$self->handle->fh->close; # cases "Out of memory"?
+                $self->_stop_timer( 'open' );
+                $cb ? $cb->( { code => 500, message => 'Open timeout.' }, $self )
+                    : Carp::croak('Open timeout.');
+            } );
+
+            $self->on('open')->( $self );
+
             return $self->transport->open( $self, $fh, $host, $port, $sid, $cb );
         }
     );

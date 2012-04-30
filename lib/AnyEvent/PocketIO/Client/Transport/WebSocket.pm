@@ -27,14 +27,9 @@ sub open {
                   "ws://$host:$port/socket.io/1/websocket/$sid");
     my $frame  = Protocol::WebSocket::Frame->new( version => $hs->version );
 
-    $client->{ handle } = PocketIO::Handle->new(
-        fh => $fh, heartbeat_timeout => $client->{ heartbeat_timeout }
-    );
-
-    my $conn = $client->{ conn } = PocketIO::Connection->new();
-
     $client->handle->write( $hs->to_string => sub {
         my ( $handle ) = shift;
+        my $conn = $client->conn;
 
         my $close_cb = sub { $handle->close; };
 
@@ -49,7 +44,7 @@ sub open {
         $handle->on_read( sub {
             unless ( $client->is_opened ) {
                 $client->opened;
-                $client->_run_open_cb( $cb );
+                $client->_run_open_cb( $cb ) if $cb;
             }
 
             unless ($hs->is_done) {
