@@ -25,8 +25,8 @@ my $app = builder {
             } );
             $self->on('hello' => sub {
                 my ( $self, @data ) = @_;
-                ok(1, "server hello");
-                $self->send("hello, $data[0]");
+                ok(1, "server hello $data[0]");
+                $self->send("hello, $data[0] from server");
             });
             $self->on('foo' => sub {
                 my ( $self, @data ) = shift;
@@ -57,9 +57,11 @@ sub _test {
 
     $socket->on( 'message', sub {
         ok(1, $_[1]);
+        $cv->send;
     } );
 
     $socket->on( 'connect', sub {
+        ok(1, 'connect');
         $socket->send('Parumon!');
         $socket->emit('hello', "perl");
     } );

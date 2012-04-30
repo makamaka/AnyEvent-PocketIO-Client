@@ -3,6 +3,7 @@ package PocketIO::Client::IO;
 use strict;
 use warnings;
 use AnyEvent::PocketIO::Client;
+use Scalar::Util ();
 
 our $VERSION = '0.01';
 
@@ -21,29 +22,29 @@ sub connect {
 
         if ( $error ) {
             Carp::carp( $error->{ message } );
-            return $cv->send;
+            $cv->send;
+            return;
         }
 
-        $self->open( sub {
-            my ( $error, $self ) = @_;
-
-            if ( $error ) {
-                Carp::carp( $error->{ message } );
-                return $cv->send;
-            }
-
-            $socket = $self->conn->socket;
-
-            bless $socket, 'PocketIO::Socket::ForClient';
-
-            $socket->{ _client } = $client;
-
+        $self->on('open' => sub {
             $cv->send;
-        } );
+        });
 
+        $self->open();
+
+        return;
     } );
 
     $cv->wait;
+
+    return unless $client->conn;
+
+    $socket = $client->conn->socket;
+
+    bless $socket, 'PocketIO::Socket::ForClient';
+
+    $socket->{ _client } = $client;
+    Scalar::Util::weaken( $socket->{ _client } );
 
     return $socket;
 }
@@ -57,8 +58,13 @@ sub on {
     my $self = shift;
     my ( $name, $cb ) = @_;
 
-    if ( $name eq 'connect' ) {
-        $cb->( $self ) if $cb;
+    if ( $name eq 'connect' and $cb ) {
+        my $w; $w = AnyEvent->timer( after => 0, interval => 1, cb => sub {
+            if ( $self->{ _client }->is_opened ) {
+                undef $w;
+                $cb->( $self );
+            }
+        } );
     }
     else {
         $self->SUPER::on( @_ );
