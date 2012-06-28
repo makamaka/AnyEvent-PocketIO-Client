@@ -16,6 +16,24 @@ use Data::Dumper;
 
 use PocketIO::Client::IO;
 
+
+{
+    no warnings;
+
+    my $orig_func = \&PocketIO::Resource::_dispatch_handshake;
+    my $orig_func2 = \&PocketIO::Resource::_build_transport;
+
+    *PocketIO::Resource::__dispatch_handshake = sub {
+        sleep (5);
+        return $orig_func->(@_);
+    };
+
+    *PocketIO::Resource::__build_transport = sub {
+        sleep (2);
+        return $orig_func2->(@_);
+    };
+}
+
 my $app = builder {
     mount '/socket.io' => PocketIO->new(
         handler => sub {
