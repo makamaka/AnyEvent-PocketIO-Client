@@ -274,7 +274,7 @@ __END__
 
 =head1 NAME
 
-AnyEvent::PocketIO::Client - pocketio client
+AnyEvent::PocketIO::Client - Socket.IO client
 
 =head1 SYNOPSIS
 
@@ -338,13 +338,11 @@ AnyEvent::PocketIO::Client - pocketio client
 
 =head1 DESCRIPTION
 
-Async client using AnyEvent.
+Socket.IO client using L<PocketIO> and L<AnyEvent>.
 
-This is B<beta> version!
+This is B<beta> version. APIs will be changed.
 
-APIs will be changed.
-
-Currently acceptable transport id is websocket only.
+Currently acceptable transport id is B<websocket> only.
 
 =head1 METHODS
 
@@ -352,7 +350,7 @@ Currently acceptable transport id is websocket only.
 
     $client = AnyEvent::PocketIO::Client->new( %opts )
 
-C<new> takes options
+Returns a new object. it can take the follow options
 
 =over
 
@@ -366,8 +364,8 @@ C<new> takes options
 
     $client->handshake( $host, $port, $cb );
 
-The handshake routine. it executes a call back C<$cb> that takes
-error, client itself, session id, heartbeat timeout, connection timeout
+The handshake routine. it executes a call back C<$cb> that takes an
+error (if any, otherwise C<undef>), client itself, the session id, heartbeat timeout, connection timeout
 and list reference of transports.
 
     sub {
@@ -468,6 +466,10 @@ Simple client module L<PocketIO::Client::IO>.
     } );
 
     $cv->wait;
+
+=head1 TODO
+
+Currently this module supports C<websocket> only. Patches welcome!
 
 =head1 SEE ALSO
 

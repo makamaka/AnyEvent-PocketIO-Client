@@ -3,8 +3,8 @@ use strict;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    'NAME'          => 'AnyEvent::PocketIO::Client',
-    'VERSION_FROM'  => 'lib/AnyEvent/PocketIO/Client.pm', # finds $VERSION
+    'NAME'          => 'PocketIO::Client::IO',
+    'VERSION_FROM'  => 'lib/PocketIO/Client/IO.pm',
     'PREREQ_PM'     => {
               'Test::More'  => 0,
               'Test::TCP'   => 0,
@@ -14,7 +14,7 @@ WriteMakefile(
               'PocketIO'    => '0.13',
     },
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM => 'lib/AnyEvent/PocketIO/Client.pm', # retrieve abstract from module
+      (ABSTRACT_FROM => 'lib/PocketIO/Client/IO.pm', # retrieve abstract from module
        AUTHOR     => 'Makamaka Hannyaharamitu, E<lt>makamaka[at]cpan.orgE<gt>') : ()),
     ( $ExtUtils::MakeMaker::VERSION >= 6.3002 ? ('LICENSE' => 'perl', ) : () ),
 

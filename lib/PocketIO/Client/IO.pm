@@ -74,3 +74,67 @@ sub on {
 
 1;
 
+=pod
+
+=head1 NAME
+
+PocketIO::Client::IO - simple pocketio client
+
+=head1 SYNOPSIS
+
+    use PocketIO::Client::IO;
+    
+    my $socket = PocketIO::Client::IO->connect("http://localhost:3000/");
+    # $socket is a PocketIO::Socket object.
+    
+    my $cv = AnyEvent->condvar;
+    my $w  = AnyEvent->timer( after => 5, cb => $cv );
+    
+    $socket->on( 'message', sub {
+        say $_[1];
+    } );
+    
+    $socket->on( 'connect', sub {
+        $socket->send('Parumon!');
+        $socket->emit('hello', "perl");
+    } );
+    
+    $cv->wait;
+
+=head1 DESCRIPTION
+
+Simple Socket.IO client using AnyEvent::PocketIO::Client.
+
+This is B<beta> version. APIs will be changed.
+
+Currently acceptable transport id is B<websocket> only.
+
+If you want to controll client action more detail,
+please see to L<AnyEvent::PocketIO::Client>.
+
+=head1 METHODS
+
+=head2 connect
+
+    $socket = PocketIO::Client::IO->connect( $url );
+
+Handshakes and connects to C<$url>, then returns a C<PocketIO::Socket::ForClient>
+object which inherits L<PocketIO::Socket>.
+
+=head1 SEE ALSO
+
+L<AnyEvent::PocketIO::Client>, L<PocketIO>, L<PcketIO::Socket>
+
+=head1 AUTHOR
+
+Makamaka Hannyaharamitu, E<lt>makamaka[at]cpan.orgE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2012 by Makamaka Hannyaharamitu
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
+=cut
+
