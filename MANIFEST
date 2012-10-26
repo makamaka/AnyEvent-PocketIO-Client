@@ -3,6 +3,7 @@ lib/AnyEvent/PocketIO/Client/Transport/WebSocket.pm
 lib/PocketIO/Client/IO.pm
 Makefile.PL
 MANIFEST			This list of files
+MANIFEST.SKIP
 README
 Changes
 t/01_base.t
