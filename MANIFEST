@@ -11,5 +11,6 @@ t/02_error.t
 t/03_dup_con.t
 t/04_multi_conn.t
 t/05_handshake_timeout.t
-t/io_api.t
+t/06_open_timeout.t
+t/07_op.t
 
