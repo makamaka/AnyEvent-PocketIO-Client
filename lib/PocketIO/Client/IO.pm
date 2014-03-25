@@ -4,15 +4,15 @@ use strict;
 use warnings;
 use AnyEvent::PocketIO::Client;
 use Scalar::Util ();
+use URI;
 
 our $VERSION = '0.01';
 
 sub connect {
     my ( $clsas, $url ) = @_;
     my $client = AnyEvent::PocketIO::Client->new;
-    my ( $server, $port ) = $url =~ m{https?://([.\w]+)(?::(\d+))?};
-
-    $port ||= 80;
+    my $uri = URI->new($url);
+    my ( $server, $port ) = ( $uri->host , $uri->port );
 
     my $socket;
     my $cv = AnyEvent->condvar;
